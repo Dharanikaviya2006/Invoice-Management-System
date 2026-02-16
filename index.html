@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HE5 Event Branding System</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Lora:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+:root{ --orange:#fc7800; --orange-light:#ff9d3f; }
+
+body{
+margin:0;
+font-family:'Poppins',sans-serif;
+background:linear-gradient(135deg,#fc7800,#ff9d3f);
+display:flex;
+justify-content:center;
+}
+
+.container{
+width:95%;
+max-width:1200px;
+background:#fff;
+margin:30px 0;
+padding:30px;
+border-radius:20px;
+box-shadow:0 15px 40px rgba(0,0,0,0.12);
+}
+
+h2{font-family:'Lora',serif;color:var(--orange);text-align:center;}
+.hidden{display:none;}
+
+input,textarea,select,button{
+width:100%;
+margin-top:12px;
+padding:12px;
+border-radius:10px;
+font-family:inherit;
+font-size:14px;
+box-sizing:border-box;
+}
+
+button{
+background:var(--orange);
+color:#fff;
+border:none;
+font-weight:600;
+cursor:pointer;
+}
+
+.back-btn{ background:#777 !important; }
+
+.frame-container{
+position:relative;
+width:100%;
+aspect-ratio:1/1;
+overflow:hidden;
+border-radius:16px;
+background:#f3f3f3;
+touch-action:none;
+margin-top:15px;
+}
+
+.photo{
+position:absolute;
+top:50%;
+left:50%;
+transform-origin:center;
+max-width:none;
+max-height:none;
+z-index:1;
+}
+
+#cameraPreview{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+object-fit:cover;
+border-radius:16px;
+z-index:2;
+}
+
+.frame{
+position:absolute;
+top:50%;
+left:50%;
+width:100%;
+height:100%;
+object-fit:cover;
+transform:translate(-50%,-50%);
+pointer-events:none;
+z-index:3;
+}
+
+.caption{ margin-top:16px; font-size:14px; text-align:center;}
+.notice{ text-align:center; font-size:13px; color:var(--orange); margin-top:8px; height:18px; }
+
+.nav-buttons{
+display:flex;
+gap:10px;
+margin-top:20px;
+}
+.nav-buttons button{ flex:1; }
+
+.shutter-btn{
+width:70px;
+height:70px;
+border-radius:50%;
+border:6px solid white;
+background:white;
+box-shadow:0 4px 15px rgba(0,0,0,0.3);
+cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<!-- STEP 1 -->
+<div id="step1">
+<h2>Step 1: Frame Setup</h2>
+
+<input type="file" id="frameUpload" accept="image/*">
+<textarea id="defaultCaption" placeholder="Default professional caption"></textarea>
+<input type="text" id="defaultTags" placeholder="#HE5Solutions #Innovation">
+
+<div class="nav-buttons">
+<button id="toStep2">Next →</button>
+</div>
+</div>
+
+<!-- STEP 2 -->
+<div id="step2" class="hidden">
+<h2>Step 2: Photo Editing</h2>
+
+<div class="frame-container" id="captureArea">
+<img id="userPhoto" class="photo">
+<video id="cameraPreview" autoplay playsinline style="display:none;"></video>
+<img id="frameOverlay" class="frame">
+</div>
+
+<input type="file" id="photoUpload" accept="image/*">
+
+<div style="display:flex; gap:8px;">
+<button id="openCameraBtn">📷 Capture</button>
+<button id="switchCameraBtn" style="display:none;">🔄</button>
+<button id="rotateBtn">↻</button>
+</div>
+
+<div id="shutterWrapper" style="display:none; text-align:center; margin-top:15px;">
+<button id="captureBtn" class="shutter-btn"></button>
+</div>
+
+<div class="nav-buttons">
+<button class="back-btn" id="backTo1">← Back</button>
+<button id="toStep3">Next →</button>
+</div>
+</div>
+
+<!-- STEP 3 -->
+<div id="step3" class="hidden">
+<h2>Step 3: Preview & Share</h2>
+
+<div class="frame-container">
+<img id="previewImage" style="width:100%;border-radius:16px;">
+</div>
+
+<div class="caption">
+<div id="captionText"></div>
+<div id="hashText"></div>
+</div>
+
+<select id="downloadFormat">
+<option value="png">PNG</option>
+<option value="jpg">JPG</option>
+<option value="jpeg">JPEG</option>
+<option value="pdf">PDF</option>
+</select>
+
+<button id="downloadBtn">Download</button>
+<button id="shareBtn">Share</button>
+<div class="notice" id="notice"></div>
+
+<div class="nav-buttons">
+<button class="back-btn" id="backTo2">← Back</button>
+</div>
+</div>
+
+</div>
+
+<script>
+/* ================= CORE VARIABLES ================= */
+const DEFAULT_TAGS=["#HE5Solutions","#EventBranding","#Innovation"];
+
+const frameUpload=document.getElementById("frameUpload");
+const defaultCaption=document.getElementById("defaultCaption");
+const defaultTags=document.getElementById("defaultTags");
+const frameOverlay=document.getElementById("frameOverlay");
+const userPhoto=document.getElementById("userPhoto");
+const photoUpload=document.getElementById("photoUpload");
+const captionText=document.getElementById("captionText");
+const hashText=document.getElementById("hashText");
+const captureArea=document.getElementById("captureArea");
+const notice=document.getElementById("notice");
+const openCameraBtn=document.getElementById("openCameraBtn");
+const cameraPreview=document.getElementById("cameraPreview");
+const captureBtn=document.getElementById("captureBtn");
+const switchCameraBtn=document.getElementById("switchCameraBtn");
+const rotateBtn=document.getElementById("rotateBtn");
+const downloadBtn=document.getElementById("downloadBtn");
+const shareBtn=document.getElementById("shareBtn");
+const downloadFormat=document.getElementById("downloadFormat");
+
+let caption="", tags=[];
+
+/* ================= STEP NAVIGATION ================= */
+const step1=document.getElementById("step1");
+const step2=document.getElementById("step2");
+const step3=document.getElementById("step3");
+
+document.getElementById("toStep2").onclick=()=>{
+if(!frameUpload.files[0]) return alert("Upload frame image");
+
+const reader=new FileReader();
+reader.onload=e=>{
+frameOverlay.src=e.target.result;
+caption=defaultCaption.value;
+tags=[...DEFAULT_TAGS,...defaultTags.value.split(" ").filter(Boolean)];
+captionText.textContent=caption;
+hashText.textContent=tags.join(" ");
+step1.classList.add("hidden");
+step2.classList.remove("hidden");
+};
+reader.readAsDataURL(frameUpload.files[0]);
+};
+
+document.getElementById("backTo1").onclick=()=>{
+step2.classList.add("hidden");
+step1.classList.remove("hidden");
+};
+
+document.getElementById("toStep3").onclick=async()=>{
+const canvas=await generateCanvas();
+document.getElementById("previewImage").src=canvas.toDataURL("image/png");
+step2.classList.add("hidden");
+step3.classList.remove("hidden");
+};
+
+document.getElementById("backTo2").onclick=()=>{
+step3.classList.add("hidden");
+step2.classList.remove("hidden");
+};
+
+/* ================= IMAGE ENGINE ================= */
+let scale=1, baseScale=1, posX=0, posY=0, rotation=0;
+
+function render(){
+userPhoto.style.transform=
+`translate(-50%, -50%) translate(${posX}px,${posY}px) scale(${scale}) rotate(${rotation}deg)`;
+}
+
+function fitImage(){
+const rect=captureArea.getBoundingClientRect();
+const imgW=userPhoto.naturalWidth;
+const imgH=userPhoto.naturalHeight;
+const containerRatio=rect.width/rect.height;
+const imageRatio=imgW/imgH;
+baseScale=imageRatio>containerRatio?rect.height/imgH:rect.width/imgW;
+scale=baseScale; posX=0; posY=0; rotation=0;
+render();
+}
+
+rotateBtn.onclick=()=>{
+rotation=(rotation+90)%360;
+render();
+};
+
+photoUpload.onchange=e=>{
+const reader=new FileReader();
+reader.onload=ev=>{
+userPhoto.onload=fitImage;
+userPhoto.src=ev.target.result;
+};
+reader.readAsDataURL(e.target.files[0]);
+};
+
+/* ================= CAMERA ================= */
+let stream=null, currentFacing="user";
+
+async function startCamera(){
+if(stream) stream.getTracks().forEach(t=>t.stop());
+stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:currentFacing},audio:false});
+cameraPreview.srcObject=stream;
+cameraPreview.style.display="block";
+document.getElementById("shutterWrapper").style.display="block";
+switchCameraBtn.style.display="inline-block";
+}
+
+openCameraBtn.onclick=()=>{ currentFacing="user"; startCamera(); };
+
+switchCameraBtn.onclick=()=>{
+currentFacing=currentFacing==="user"?"environment":"user";
+startCamera();
+};
+
+captureBtn.onclick=()=>{
+const canvas=document.createElement("canvas");
+canvas.width=cameraPreview.videoWidth;
+canvas.height=cameraPreview.videoHeight;
+canvas.getContext("2d").drawImage(cameraPreview,0,0);
+userPhoto.onload=fitImage;
+userPhoto.src=canvas.toDataURL("image/png");
+stream.getTracks().forEach(t=>t.stop());
+cameraPreview.style.display="none";
+document.getElementById("shutterWrapper").style.display="none";
+switchCameraBtn.style.display="none";
+};
+
+/* ================= EXPORT ================= */
+async function generateCanvas(){
+return html2canvas(captureArea,{useCORS:true,scale:2});
+}
+
+downloadBtn.onclick=async()=>{
+const canvas=await generateCanvas();
+const format=downloadFormat.value;
+
+if(format==="pdf"){
+const { jsPDF }=window.jspdf;
+const pdf=new jsPDF({unit:'px',format:[canvas.width,canvas.height]});
+pdf.addImage(canvas.toDataURL("image/png"),"PNG",0,0,canvas.width,canvas.height);
+pdf.save("event-frame.pdf");
+}else{
+const a=document.createElement("a");
+a.download=`event-frame.${format}`;
+a.href=canvas.toDataURL(`image/${format}`);
+a.click();
+}
+};
+
+shareBtn.onclick=async()=>{
+const canvas=await generateCanvas();
+const blob=await new Promise(res=>canvas.toBlob(res,"image/png"));
+const file=new File([blob],"he5-event.png",{type:"image/png"});
+
+if(navigator.clipboard && location.protocol==="https:"){
+await navigator.clipboard.writeText(`${caption} ${tags.join(" ")}`);
+notice.textContent="Caption & hashtags copied!";
+}
+
+if(navigator.share && navigator.canShare({files:[file]})){
+await navigator.share({files:[file],text:`${caption} ${tags.join(" ")}`,title:"HE5 Event Post"});
+}
+};
+</script>
+
+</body>
+</html>
