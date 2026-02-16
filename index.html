@@ -621,21 +621,21 @@ backToEditorBtn.onclick = () => {
 /* ======================================================
    EXPORT
 ====================================================== */
-async function generateCanvas(){
+async function generateCanvas() {
 
-  // Ensure image fully loaded
   if (!userPhoto.src || !userPhoto.naturalWidth) {
     alert("No image loaded.");
     throw new Error("Image not loaded");
   }
 
-  // Force reflow before capture
-  await new Promise(requestAnimationFrame);
+  // Wait for layout to fully stabilize
+  await new Promise(resolve => setTimeout(resolve, 50));
 
   const canvas = await html2canvas(captureArea, {
     useCORS: true,
-    backgroundColor: null,
-    scale: window.devicePixelRatio,
+    scale: 2,                 // fixed scale
+    backgroundColor: "#ffffff", // IMPORTANT FIX
+    removeContainer: true,
     logging: false
   });
 
@@ -674,9 +674,10 @@ downloadBtn.onclick = async () => {
     if (format === "jpeg" || format === "jpg") {
       mime = "image/jpeg";
     }
+const blob = await new Promise(resolve =>
+  canvas.toBlob(resolve, mime, 0.95) // slightly lower quality avoids rare header issues
+);
 
-    const blob = await new Promise(resolve =>
-      canvas.toBlob(resolve, mime, 1.0)
     );
 
     if (!blob) {
