@@ -621,58 +621,122 @@ backToEditorBtn.onclick = () => {
 /* ======================================================
    EXPORT
 ====================================================== */
-
 async function generateCanvas(){
 
-  const canvas = await html2canvas(captureArea,{
-    useCORS:true,
-    scale:2,
+  // Ensure image fully loaded
+  if (!userPhoto.src || !userPhoto.naturalWidth) {
+    alert("No image loaded.");
+    throw new Error("Image not loaded");
+  }
+
+  // Force reflow before capture
+  await new Promise(requestAnimationFrame);
+
+  const canvas = await html2canvas(captureArea, {
+    useCORS: true,
     backgroundColor: null,
-    onclone: (clonedDoc) => {
-
-      const clonedPhoto = clonedDoc.getElementById("userPhoto");
-
-      if(clonedPhoto){
-        clonedPhoto.style.transform = userPhoto.style.transform;
-      }
-
-    }
+    scale: window.devicePixelRatio,
+    logging: false
   });
+
+  if (!canvas.width || !canvas.height) {
+    throw new Error("Canvas render failed");
+  }
 
   return canvas;
 }
 
-downloadBtn.onclick=async()=>{
-const canvas=await generateCanvas();
-const format=downloadFormat.value;
+downloadBtn.onclick = async () => {
 
-if(format==="pdf"){
-const { jsPDF }=window.jspdf;
-const pdf=new jsPDF({orientation:'portrait',unit:'px',format:[canvas.width,canvas.height]});
-pdf.addImage(canvas.toDataURL("image/png"),"PNG",0,0,canvas.width,canvas.height);
-pdf.save("event-frame.pdf");
-}else{
-const a=document.createElement("a");
-a.download=`event-frame.${format}`;
-a.href=canvas.toDataURL(`image/${format}`);
-a.click();
-}
+  try {
+
+    const canvas = await generateCanvas();
+    const format = downloadFormat.value;
+
+    if (format === "pdf") {
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height]
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save("event-frame.pdf");
+
+      return;
+    }
+
+    // Fix MIME
+    let mime = "image/png";
+    if (format === "jpeg" || format === "jpg") {
+      mime = "image/jpeg";
+    }
+
+    const blob = await new Promise(resolve =>
+      canvas.toBlob(resolve, mime, 1.0)
+    );
+
+    if (!blob) {
+      throw new Error("Blob generation failed");
+    }
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `event-frame.${format}`;
+    document.body.appendChild(a);
+    a.click();
+
+    URL.revokeObjectURL(url);
+    a.remove();
+
+  } catch (err) {
+    console.error(err);
+    alert("Download failed. Try again.");
+  }
+
 };
 
-shareBtn.onclick=async()=>{
-const canvas=await generateCanvas();
-const blob=await new Promise(res=>canvas.toBlob(res,"image/png"));
-const file=new File([blob],"he5-event.png",{type:"image/png"});
+shareBtn.onclick = async () => {
 
-if(navigator.clipboard && location.protocol==="https:"){
-await navigator.clipboard.writeText(`${caption} ${tags.join(" ")}`);
-notice.textContent="Caption & hashtags copied!";
-}
+  try {
 
-if(navigator.share && navigator.canShare({files:[file]})){
-await navigator.share({files:[file],text:`${caption} ${tags.join(" ")}`,title:"HE5 Event Post"});
-}
+    const canvas = await generateCanvas();
+
+    const blob = await new Promise(resolve =>
+      canvas.toBlob(resolve, "image/png", 1.0)
+    );
+
+    if (!blob) throw new Error("Blob failed");
+
+    const file = new File([blob], "he5-event.png", { type: "image/png" });
+
+    if (navigator.clipboard && location.protocol === "https:") {
+      await navigator.clipboard.writeText(`${caption} ${tags.join(" ")}`);
+      notice.textContent = "Caption & hashtags copied!";
+    }
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        text: `${caption} ${tags.join(" ")}`,
+        title: "HE5 Event Post"
+      });
+    } else {
+      alert("Sharing not supported on this device.");
+    }
+
+  } catch (err) {
+    console.error(err);
+    alert("Share failed.");
+  }
+
 };
+
 </script>
 
 </body>
