@@ -341,7 +341,8 @@ let startY = 0;
 let pointers = new Map();
 let pinchStartDistance = 0;
 let pinchStartScale = 1;
-let rotation = 0; // rotation in degrees
+let rotation = 0;// rotation in degrees
+let finalCanvas = null;
 
 /* Smooth GPU render */
 function render(){
@@ -600,24 +601,61 @@ reader.readAsDataURL(e.target.files[0]);
 /* ===============================
    STEP 2 → STEP 3
 ================================= */
-
 goToPreviewBtn.onclick = async () => {
 
-  const canvas = await generateCanvas();
-  previewImage.src = canvas.toDataURL("image/png");
+  if (!userPhoto.src || !userPhoto.naturalWidth) {
+    alert("Please upload or capture a photo first.");
+    return;
+  }
 
-  previewCaption.textContent = caption;
-  previewHash.textContent = tags.join(" ");
+  try {
 
-  photoEditorSection.classList.add("hidden");
-  previewSection.classList.remove("hidden");
+    // Generate base image from editor
+    const baseCanvas = await generateCanvas();
+
+    // Create final canvas that includes caption
+    finalCanvas = document.createElement("canvas");
+    const ctx = finalCanvas.getContext("2d");
+
+    const captionHeight = 80;
+
+    finalCanvas.width = baseCanvas.width;
+    finalCanvas.height = baseCanvas.height + captionHeight;
+
+    // White background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+    // Draw image
+    ctx.drawImage(baseCanvas, 0, 0);
+
+    // Draw caption background
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, baseCanvas.height, finalCanvas.width, captionHeight);
+
+    // Draw caption text
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 20px Poppins";
+    ctx.textAlign = "center";
+
+    const fullText = `${caption} ${tags.join(" ")}`;
+    ctx.fillText(fullText, finalCanvas.width / 2, baseCanvas.height + 45);
+
+    // Show preview
+    previewImage.src = finalCanvas.toDataURL("image/png");
+
+    previewCaption.textContent = caption;
+    previewHash.textContent = tags.join(" ");
+
+    photoEditorSection.classList.add("hidden");
+    previewSection.classList.remove("hidden");
+
+  } catch (err) {
+    console.error(err);
+    alert("Failed to generate preview.");
+  }
+
 };
-
-backToEditorBtn.onclick = () => {
-  previewSection.classList.add("hidden");
-  photoEditorSection.classList.remove("hidden");
-};
-
 /* ======================================================
    EXPORT
 ====================================================== */
@@ -645,44 +683,48 @@ async function generateCanvas() {
 
   return canvas;
 }
-
 downloadBtn.onclick = async () => {
 
   try {
 
-    const canvas = await generateCanvas();
+    if (!finalCanvas) {
+      alert("Preview not generated.");
+      return;
+    }
+
     const format = downloadFormat.value;
 
     if (format === "pdf") {
 
       const { jsPDF } = window.jspdf;
+
       const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height]
+        orientation: "portrait",
+        unit: "px",
+        format: [finalCanvas.width, finalCanvas.height]
       });
 
-      const imgData = canvas.toDataURL("image/png");
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save("event-frame.pdf");
+      pdf.addImage(
+        finalCanvas.toDataURL("image/png"),
+        "PNG",
+        0,
+        0,
+        finalCanvas.width,
+        finalCanvas.height
+      );
 
+      pdf.save("event-frame.pdf");
       return;
     }
 
-    // Fix MIME
     let mime = "image/png";
-    if (format === "jpeg" || format === "jpg") {
+    if (format === "jpg" || format === "jpeg") {
       mime = "image/jpeg";
     }
-const blob = await new Promise(resolve =>
-  canvas.toBlob(resolve, mime, 0.95) // slightly lower quality avoids rare header issues
-);
 
+    const blob = await new Promise(resolve =>
+      finalCanvas.toBlob(resolve, mime, 0.95)
     );
-
-    if (!blob) {
-      throw new Error("Blob generation failed");
-    }
 
     const url = URL.createObjectURL(blob);
 
@@ -697,34 +739,40 @@ const blob = await new Promise(resolve =>
 
   } catch (err) {
     console.error(err);
-    alert("Download failed. Try again.");
+    alert("Download failed.");
   }
 
 };
-
 shareBtn.onclick = async () => {
 
   try {
 
-    const canvas = await generateCanvas();
-
-    const blob = await new Promise(resolve =>
-      canvas.toBlob(resolve, "image/png", 1.0)
-    );
-
-    if (!blob) throw new Error("Blob failed");
-
-    const file = new File([blob], "he5-event.png", { type: "image/png" });
-
-    if (navigator.clipboard && location.protocol === "https:") {
-      await navigator.clipboard.writeText(`${caption} ${tags.join(" ")}`);
-      notice.textContent = "Caption & hashtags copied!";
+    if (!finalCanvas) {
+      alert("Preview not generated.");
+      return;
     }
 
+    const blob = await new Promise(resolve =>
+      finalCanvas.toBlob(resolve, "image/png", 0.95)
+    );
+
+    const file = new File([blob], "he5-event.png", {
+      type: "image/png"
+    });
+
+    const textToCopy = `${caption} ${tags.join(" ")}`;
+
+    // Copy text to clipboard
+    if (navigator.clipboard && location.protocol === "https:") {
+      await navigator.clipboard.writeText(textToCopy);
+      notice.textContent = "Caption & hashtags copied to clipboard!";
+    }
+
+    // Share image + text
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
         files: [file],
-        text: `${caption} ${tags.join(" ")}`,
+        text: textToCopy,
         title: "HE5 Event Post"
       });
     } else {
@@ -737,7 +785,6 @@ shareBtn.onclick = async () => {
   }
 
 };
-
 </script>
 
 </body>
