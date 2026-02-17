@@ -705,17 +705,29 @@ shareBtn.addEventListener("click", async () => {
       return;
     }
 
-    const format = downloadFormat.value;
+    const format = downloadFormat.value.toLowerCase();
+
     const formattedText = caption.trim()
       ? `${caption.trim()}\n\n${tags.join(" ").trim()}`
       : tags.join(" ").trim();
 
-    let file;
+    let blob;
+    let mime;
+    let extension;
 
     /* ===============================
-       HANDLE PDF SHARE
+       DETERMINE FORMAT PROPERLY
     =============================== */
-    if (format === "pdf") {
+
+    if (format === "png") {
+      mime = "image/png";
+      extension = "png";
+    }
+    else if (format === "jpg" || format === "jpeg") {
+      mime = "image/jpeg";
+      extension = "jpg";
+    }
+    else if (format === "pdf") {
 
       const { jsPDF } = window.jspdf;
 
@@ -734,76 +746,86 @@ shareBtn.addEventListener("click", async () => {
         finalCanvas.height
       );
 
-      const pdfBlob = pdf.output("blob");
+      blob = pdf.output("blob");
 
-      file = new File([pdfBlob], "he5-event.pdf", {
+      const file = new File([blob], "he5-event.pdf", {
         type: "application/pdf"
       });
 
-    } else {
-
-      /* ===============================
-         HANDLE IMAGE SHARE
-      =============================== */
-
-      let mime = "image/png";
-
-      if (format === "jpg" || format === "jpeg") {
-        mime = "image/jpeg";
-      }
-
-      const blob = await new Promise(resolve =>
-        finalCanvas.toBlob(resolve, mime, 0.95)
-      );
-
-      if (!blob) {
-        alert("Failed to prepare image.");
-        return;
-      }
-
-      file = new File([blob], `he5-event.${format}`, {
-        type: mime
-      });
+      await copyCaption(formattedText);
+      await shareFile(file, formattedText);
+      return;
+    }
+    else {
+      mime = "image/png";
+      extension = "png";
     }
 
     /* ===============================
-       COPY CAPTION TO CLIPBOARD
+       FORCE MIME CORRECTLY
     =============================== */
-    if (navigator.clipboard && window.isSecureContext) {
-      try {
-        await navigator.clipboard.writeText(formattedText);
-        notice.textContent = "Caption copied to clipboard!";
-      } catch (err) {
-        console.warn("Clipboard failed");
-      }
-    }
 
-    /* ===============================
-       SHARE FILE
-    =============================== */
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    blob = await new Promise((resolve, reject) => {
+      finalCanvas.toBlob((b) => {
+        if (!b) reject("Blob failed");
+        else resolve(b);
+      }, mime, 0.95);
+    });
 
-      await navigator.share({
-        files: [file],
-        text: formattedText
-      });
+    const file = new File(
+      [blob],
+      `he5-event.${extension}`,
+      { type: mime }
+    );
 
-    } else {
-
-      await navigator.share({
-        text: formattedText
-      });
-
-      alert("File sharing not supported. Caption copied.");
-    }
+    await copyCaption(formattedText);
+    await shareFile(file, formattedText);
 
   } catch (err) {
     console.error(err);
-    alert("Share cancelled or failed.");
+    alert("Share failed or cancelled.");
   }
 
 });
 
+
+/* ===============================
+   SHARE HELPER
+=============================== */
+
+async function shareFile(file, text) {
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+
+    await navigator.share({
+      files: [file],
+      text: text
+    });
+
+  } else {
+
+    await navigator.share({
+      text: text
+    });
+
+    alert("File sharing not supported. Caption copied.");
+  }
+}
+
+
+/* ===============================
+   CLIPBOARD HELPER
+=============================== */
+
+async function copyCaption(text) {
+
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      notice.textContent = "Caption copied to clipboard!";
+    } catch {}
+  }
+}
 </script>
 
 </body>
