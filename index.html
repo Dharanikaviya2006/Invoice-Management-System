@@ -705,36 +705,82 @@ shareBtn.addEventListener("click", async () => {
       return;
     }
 
-    // Convert canvas to blob
-    const blob = await new Promise(resolve =>
-      finalCanvas.toBlob(resolve, "image/png", 0.95)
-    );
-
-    if (!blob) {
-      alert("Failed to prepare image.");
-      return;
-    }
-
-    const file = new File([blob], "he5-event.png", {
-      type: "image/png"
-    });
-
-    // Clean caption formatting (WhatsApp style)
+    const format = downloadFormat.value;
     const formattedText = caption.trim()
       ? `${caption.trim()}\n\n${tags.join(" ").trim()}`
       : tags.join(" ").trim();
 
-    // Always copy to clipboard
+    let file;
+
+    /* ===============================
+       HANDLE PDF SHARE
+    =============================== */
+    if (format === "pdf") {
+
+      const { jsPDF } = window.jspdf;
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [finalCanvas.width, finalCanvas.height]
+      });
+
+      pdf.addImage(
+        finalCanvas.toDataURL("image/png"),
+        "PNG",
+        0,
+        0,
+        finalCanvas.width,
+        finalCanvas.height
+      );
+
+      const pdfBlob = pdf.output("blob");
+
+      file = new File([pdfBlob], "he5-event.pdf", {
+        type: "application/pdf"
+      });
+
+    } else {
+
+      /* ===============================
+         HANDLE IMAGE SHARE
+      =============================== */
+
+      let mime = "image/png";
+
+      if (format === "jpg" || format === "jpeg") {
+        mime = "image/jpeg";
+      }
+
+      const blob = await new Promise(resolve =>
+        finalCanvas.toBlob(resolve, mime, 0.95)
+      );
+
+      if (!blob) {
+        alert("Failed to prepare image.");
+        return;
+      }
+
+      file = new File([blob], `he5-event.${format}`, {
+        type: mime
+      });
+    }
+
+    /* ===============================
+       COPY CAPTION TO CLIPBOARD
+    =============================== */
     if (navigator.clipboard && window.isSecureContext) {
       try {
         await navigator.clipboard.writeText(formattedText);
         notice.textContent = "Caption copied to clipboard!";
-      } catch (e) {
-        console.warn("Clipboard failed", e);
+      } catch (err) {
+        console.warn("Clipboard failed");
       }
     }
 
-    // Check if device supports file + text sharing
+    /* ===============================
+       SHARE FILE
+    =============================== */
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
 
       await navigator.share({
@@ -744,12 +790,11 @@ shareBtn.addEventListener("click", async () => {
 
     } else {
 
-      // Fallback: Share text only (image must be sent manually)
       await navigator.share({
         text: formattedText
       });
 
-      alert("Image sharing not supported on this device. Caption copied to clipboard.");
+      alert("File sharing not supported. Caption copied.");
     }
 
   } catch (err) {
