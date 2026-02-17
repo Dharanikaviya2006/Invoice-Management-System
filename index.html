@@ -294,8 +294,6 @@ const previewHash=document.getElementById("previewHash");
 const frameOverlay=document.getElementById("frameOverlay");
 const userPhoto=document.getElementById("userPhoto");
 const photoUpload=document.getElementById("photoUpload");
-const captionText=document.getElementById("captionText");
-const hashText=document.getElementById("hashText");
 const captureArea=document.getElementById("captureArea");
 const notice=document.getElementById("notice");
 const backBtn=document.getElementById("backBtn");
@@ -560,8 +558,6 @@ reader.onload=ev=>{
 frameOverlay.src=ev.target.result;
 caption=defaultCaption.value;
 tags=[...DEFAULT_TAGS,...defaultTags.value.split(" ").filter(Boolean)];
-captionText.textContent=caption;
-hashText.textContent=tags.join(" ");
 setupSection.classList.add("hidden");
 photoEditorSection.classList.remove("hidden");
 };
