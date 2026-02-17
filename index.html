@@ -610,40 +610,13 @@ goToPreviewBtn.onclick = async () => {
 
   try {
 
-    // Generate base image from editor
-    const baseCanvas = await generateCanvas();
+    // Generate final image (frame + photo only)
+    finalCanvas = await generateCanvas();
 
-    // Create final canvas that includes caption
-    finalCanvas = document.createElement("canvas");
-    const ctx = finalCanvas.getContext("2d");
-
-    const captionHeight = 80;
-
-    finalCanvas.width = baseCanvas.width;
-    finalCanvas.height = baseCanvas.height + captionHeight;
-
-    // White background
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
-
-    // Draw image
-    ctx.drawImage(baseCanvas, 0, 0);
-
-    // Draw caption background
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(0, baseCanvas.height, finalCanvas.width, captionHeight);
-
-    // Draw caption text
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 20px Poppins";
-    ctx.textAlign = "center";
-
-    const fullText = `${caption} ${tags.join(" ")}`;
-    ctx.fillText(fullText, finalCanvas.width / 2, baseCanvas.height + 45);
-
-    // Show preview
+    // Show preview (NO caption drawn inside image)
     previewImage.src = finalCanvas.toDataURL("image/png");
 
+    // Show caption text below preview
     previewCaption.textContent = caption;
     previewHash.textContent = tags.join(" ");
 
