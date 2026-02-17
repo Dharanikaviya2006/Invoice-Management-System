@@ -716,7 +716,7 @@ downloadBtn.onclick = async () => {
   }
 
 };
-shareBtn.onclick = async () => {
+shareBtn.addEventListener("click", async () => {
 
   try {
 
@@ -725,39 +725,60 @@ shareBtn.onclick = async () => {
       return;
     }
 
+    // Convert canvas to blob
     const blob = await new Promise(resolve =>
       finalCanvas.toBlob(resolve, "image/png", 0.95)
     );
+
+    if (!blob) {
+      alert("Failed to prepare image.");
+      return;
+    }
 
     const file = new File([blob], "he5-event.png", {
       type: "image/png"
     });
 
-    const textToCopy = `${caption} ${tags.join(" ")}`;
+    // Clean caption formatting (WhatsApp style)
+    const formattedText = caption.trim()
+      ? `${caption.trim()}\n\n${tags.join(" ").trim()}`
+      : tags.join(" ").trim();
 
-    // Copy text to clipboard
-    if (navigator.clipboard && location.protocol === "https:") {
-      await navigator.clipboard.writeText(textToCopy);
-      notice.textContent = "Caption & hashtags copied to clipboard!";
+    // Always copy to clipboard
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(formattedText);
+        notice.textContent = "Caption copied to clipboard!";
+      } catch (e) {
+        console.warn("Clipboard failed", e);
+      }
     }
 
-    // Share image + text
+    // Check if device supports file + text sharing
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
+
       await navigator.share({
         files: [file],
-        text: textToCopy,
-        title: "HE5 Event Post"
+        text: formattedText
       });
+
     } else {
-      alert("Sharing not supported on this device.");
+
+      // Fallback: Share text only (image must be sent manually)
+      await navigator.share({
+        text: formattedText
+      });
+
+      alert("Image sharing not supported on this device. Caption copied to clipboard.");
     }
 
   } catch (err) {
     console.error(err);
-    alert("Share failed.");
+    alert("Share cancelled or failed.");
   }
 
-};
+});
+
 </script>
 
 </body>
