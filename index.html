@@ -11,25 +11,38 @@
 
 <style>
 :root{ --orange:#fc7800; --orange-light:#ff9d3f; }
+html, body{
+  height:100%;
+  margin:0;
+  overflow:hidden; /* 🚀 No scrolling */
+}
 
 body{
-margin:0;
-font-family:'Poppins',sans-serif;
-background:linear-gradient(135deg,#fc7800,#ff9d3f);
-display:flex;
-flex-direction:column;
-align-items:center;
+  font-family:'Poppins',sans-serif;
+  background:linear-gradient(135deg,#fc7800,#ff9d3f);
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
 
 .section{
-width:95%;
-max-width:1400px;
-margin:20px auto 40px;
-background:#fff;
-padding:30px;
-border-radius:20px;
-box-shadow:0 15px 40px rgba(0,0,0,0.12);
-box-sizing:border-box;
+  width:95vw;              /* Slightly smaller */
+  height:95vh;             /* Slightly smaller */
+  max-width:1400px;
+  max-height:900px;
+
+  background:#fff;
+  border-radius:20px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.15);
+
+  padding:20px;
+  box-sizing:border-box;
+
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+
+  overflow:hidden;         /* 🚀 Prevent internal scroll */
 }
 
 h2{font-family:'Lora',serif;color:var(--orange)}
@@ -58,14 +71,16 @@ cursor:pointer;
 /* ===== FRAME CONTAINER ===== */
 
 .frame-container{
-position:relative;
-width:100%;
-aspect-ratio:1/1;
-overflow:hidden;
-border-radius:16px;
-background:#f3f3f3;
-touch-action:none;
+  position:relative;
+  width:100%;
+  height:100%;          /* 🚀 Fill panel */
+  aspect-ratio:auto;    /* Remove fixed ratio */
+  overflow:hidden;
+  border-radius:16px;
+  background:#f3f3f3;
+  touch-action:none;
 }
+
 /* ===== SHUTTER BUTTON ===== */
 
 .shutter-btn{
@@ -135,6 +150,12 @@ transform:translate(-50%,-50%);
 pointer-events:none;
 z-index:3;
 }
+.editor-layout{
+  flex:1;
+  display:flex;
+  height:100%;
+}
+
 
 .caption{ margin-top:16px; font-size:14px; }
 .notice{ text-align:center; font-size:13px; color:var(--orange); margin-top:8px; height:18px; }
@@ -144,7 +165,9 @@ z-index:3;
   .editor-layout{
     display:flex;
     width:100%;
-  }
+    flex:1;
+    height:100%;
+    }
 
   .left-panel{
     width:50%;
@@ -161,13 +184,19 @@ z-index:3;
 /* ===== MOBILE PORTRAIT ===== */
 @media (max-width:1023px) and (orientation:portrait){
   .editor-layout{
-    display:block;
+    flex-direction:column;
+  }
+
+  .left-panel,
+  .right-panel{
+    width:100%;
   }
 
   .frame-container{
-    aspect-ratio:1/1;
+    height:60%;
   }
 }
+
 
 /* ===== MOBILE LANDSCAPE ===== */
 @media (max-width:1023px) and (orientation:landscape){
@@ -209,8 +238,6 @@ z-index:3;
 </div>
 
 <div class="section hidden" id="photoEditorSection">
-
-<h2 style="text-align:center;">HE5 Solutions Editor</h2>
 <button class="back-btn" id="backBtn">⬅ Back to Setup</button>
 
 
@@ -242,7 +269,6 @@ z-index:3;
 </div>
 </div>
 <div class="section hidden" id="previewSection">
-<h2 style="text-align:center;">Final Preview</h2>
 <button class="back-btn" id="backToEditorBtn">⬅ Back to Editor</button>
 
 <div class="editor-layout">
