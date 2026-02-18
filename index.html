@@ -183,20 +183,28 @@ z-index:3;
 
 /* ===== MOBILE PORTRAIT ===== */
 @media (max-width:1023px) and (orientation:portrait){
+
   .editor-layout{
     flex-direction:column;
+    height:100%;
   }
 
-  .left-panel,
-  .right-panel{
+  .left-panel{
+    flex:0 0 60%;   /* 🔥 Give frame real space */
     width:100%;
   }
 
+  .right-panel{
+    flex:1;         /* Remaining space for controls */
+    width:100%;
+    overflow:hidden;
+  }
+
   .frame-container{
-    height:60%;
+    width:100%;
+    height:100%;    /* Now works because parent has height */
   }
 }
-
 
 /* ===== MOBILE LANDSCAPE ===== */
 @media (max-width:1023px) and (orientation:landscape){
@@ -218,10 +226,10 @@ z-index:3;
   }
 
   /* Make frame feel full screen */
-  .frame-container{
-    aspect-ratio:auto;
-    height:85vh;
-  }
+ .frame-container{
+  width:100%;
+  height:100%;
+};
 
 }
 </style>
