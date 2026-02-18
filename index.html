@@ -544,6 +544,24 @@ captureBtn.onclick = () => {
 
   userPhoto.style.display = "block";
 };
+
+/* ===============================
+   BACK TO EDITOR BUTTON FIX
+=============================== */
+
+backToEditorBtn.addEventListener("click", () => {
+
+  // Hide preview section
+  previewSection.classList.add("hidden");
+
+  // Show editor section
+  photoEditorSection.classList.remove("hidden");
+
+  // Clear notice message
+  notice.textContent = "";
+
+});
+
 /* ======================================================
    FORM
 ====================================================== */
