@@ -230,8 +230,7 @@ z-index:3;
   width:100%;
   height:100%;
 };
-
-}
+  }
 </style>
 </head>
 <body>
@@ -501,10 +500,16 @@ async function startCamera() {
     return;
   }
 
-  if (location.protocol !== "https:" && location.hostname !== "localhost") {
-    alert("Camera works only in HTTPS.");
-    return;
-  }
+  const isLocal =
+  location.hostname === "localhost" ||
+  location.hostname === "127.0.0.1" ||
+  location.hostname.startsWith("192.168.");
+
+if (location.protocol !== "https:" && !isLocal) {
+  alert("Camera requires HTTPS or local environment.");
+  return;
+}
+
 
   try {
 
@@ -772,6 +777,7 @@ shareBtn.addEventListener("click", async () => {
     =============================== */
 
     if (format === "png") {
+      
       mime = "image/png";
       extension = "png";
     }
