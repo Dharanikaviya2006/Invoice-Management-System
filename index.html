@@ -26,23 +26,17 @@ body{
 }
 
 .section{
-  width:95vw;              /* Slightly smaller */
-  height:95vh;             /* Slightly smaller */
-  max-width:1400px;
-  max-height:900px;
+  width:100vw;
+  height:100vh;
 
   background:#fff;
-  border-radius:20px;
-  box-shadow:0 20px 60px rgba(0,0,0,0.15);
-
   padding:20px;
   box-sizing:border-box;
 
   display:flex;
   flex-direction:column;
-  justify-content:center;
 
-  overflow:hidden;         /* 🚀 Prevent internal scroll */
+  overflow:hidden;
 }
 
 h2{font-family:'Lora',serif;color:var(--orange)}
@@ -69,16 +63,16 @@ cursor:pointer;
 .hidden{display:none}
 
 /* ===== FRAME CONTAINER ===== */
-
 .frame-container{
   position:relative;
   width:100%;
-  height:100%;          /* 🚀 Fill panel */
-  aspect-ratio:auto;    /* Remove fixed ratio */
+  max-width:600px;   /* control max size */
+  margin:auto;
+  aspect-ratio: 1 / 1;  /* temporary default */
   overflow:hidden;
   border-radius:16px;
   background:#f3f3f3;
-  touch-action:none;
+  touch-action: none; /* prevent default touch actions */
 }
 
 /* ===== SHUTTER BUTTON ===== */
@@ -115,17 +109,19 @@ cursor:pointer;
 
 /* Base photo */
 .photo{
-position:absolute;
-top:50%;
-left:50%;
-transform-origin:center;
-user-select:none;
-max-width:none;
-max-height:none;
-will-change:transform;
-z-index:1;
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:auto;
+  height:auto;
+  max-width:none;
+  max-height:none;
+  transform:translate(-50%, -50%);
+  transform-origin:center center;
+  user-select:none;
+  z-index:1;
+  touch-action:none;
 }
-
 /* Camera preview */
 #cameraPreview{
 position:absolute;
@@ -140,15 +136,13 @@ z-index:2;
 
 /* Frame always on top */
 .frame{
-position:absolute;
-top:50%;
-left:50%;
-width:100%;
-height:100%;
-object-fit:cover;
-transform:translate(-50%,-50%);
-pointer-events:none;
-z-index:3;
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  pointer-events:none;
+  z-index:3;
 }
 .editor-layout{
   flex:1;
@@ -229,8 +223,8 @@ z-index:3;
  .frame-container{
   width:100%;
   height:100%;
-};
-  }
+}
+}
 </style>
 </head>
 <body>
@@ -270,9 +264,14 @@ z-index:3;
 <div id="shutterWrapper" style="display:none; text-align:center; margin-top:15px;">
   <button id="captureBtn" class="shutter-btn"></button>
 </div>
-<button id="goToPreviewBtn">Next ➜ Preview</button>
-</div>
 
+<button id="retakeBtn" class="hidden" style="margin-top:10px;">
+  🔁 Retake
+</button>
+
+<button id="goToPreviewBtn">Next ➜ Preview</button>
+
+</div>
 </div>
 </div>
 <div class="section hidden" id="previewSection">
@@ -283,7 +282,8 @@ z-index:3;
 <div class="left-panel">
 
 <div class="frame-container" id="previewArea">
-  <img id="previewImage" style="width:100%; height:100%; object-fit:cover; border-radius:16px;">
+  <img id="previewImage"
+     style="max-width:100%; max-height:100%; object-fit:contain;">
 </div>
 
 <div class="caption">
@@ -338,6 +338,7 @@ const downloadBtn=document.getElementById("downloadBtn");
 const shareBtn=document.getElementById("shareBtn");
 const downloadFormat=document.getElementById("downloadFormat");
 const previewArea=document.getElementById("previewArea");
+const retakeBtn = document.getElementById("retakeBtn");
 
 
 let caption="", tags=[];
@@ -347,19 +348,61 @@ let caption="", tags=[];
 ====================================================== */
 
 let scale = 1;
-let baseScale = 1;
+let minScale = 1;
+let maxScale = 5;
 let posX = 0;
 let posY = 0;
-let isDragging = false;
 let startX = 0;
 let startY = 0;
 let pointers = new Map();
+let initialDistance = 0;
+let initialScale = 1;
+let rotation = 0;
+/* Render */
+function render(){
+  userPhoto.style.transform =
+    `translate(-50%, -50%) 
+     translate(${posX}px, ${posY}px) 
+     scale(${scale}) 
+     rotate(${rotation}deg)`;
+}
+
+rotateBtn.onclick = () => {
+  rotation = (rotation + 90) % 360;
+  render();
+};
+
+
+/* Fit image */
+function fitImage(){
+  const rect = captureArea.getBoundingClientRect();
+  const imgW = userPhoto.naturalWidth;
+  const imgH = userPhoto.naturalHeight;
+
+  const scaleX = rect.width / imgW;
+  const scaleY = rect.height / imgH;
+
+  scale = Math.max(scaleX, scaleY);
+  minScale = scale;
+  maxScale = scale * 5;
+
+  posX = 0;
+  posY = 0;
+  rotation = 0;
+
+  render();
+}
+
+/* ======================================================
+   PROFESSIONAL FREE MOVE + SMART ZOOM ENGINE
+====================================================== */
+
+let baseScale = 1;
+let isDragging = false;
 let pinchStartDistance = 0;
 let pinchStartScale = 1;
-let rotation = 0;// rotation in degrees
-let finalCanvas = null;
 
-/* Smooth GPU render */
+/* GPU Smooth Render */
 function render(){
   requestAnimationFrame(()=>{
     userPhoto.style.transform =
@@ -369,20 +412,8 @@ function render(){
        rotate(${rotation}deg)`;
   });
 }
-const rotateBtn = document.getElementById("rotateBtn");
-rotateBtn.onclick = () => {
 
-  rotation = (rotation + 90) % 360;
-
-  // Reset position for better UX when rotated
-  posX = 0;
-  posY = 0;
-
-  render();
-};
-
-
-/* Better landscape fit */
+/* Better Fit Logic */
 function fitImage(){
 
   const rect = captureArea.getBoundingClientRect();
@@ -392,6 +423,7 @@ function fitImage(){
 
   const containerRatio = rect.width / rect.height;
   const imageRatio = imgW / imgH;
+
   if (imageRatio > containerRatio) {
     baseScale = rect.height / imgH;
   } else {
@@ -401,11 +433,12 @@ function fitImage(){
   scale = baseScale;
   posX = 0;
   posY = 0;
-  rotation=0;
+  rotation = 0;
 
   render();
 }
-/* Zoom centered properly */
+
+/* Zoom centered at pointer */
 function zoomAt(clientX, clientY, newScale){
 
   newScale = Math.min(Math.max(newScale, baseScale * 0.2), baseScale * 8);
@@ -428,8 +461,7 @@ function zoomAt(clientX, clientY, newScale){
   render();
 }
 
-/* POINTER EVENTS */
-
+/* POINTER DOWN */
 captureArea.addEventListener("pointerdown", e=>{
   captureArea.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, e);
@@ -441,17 +473,20 @@ captureArea.addEventListener("pointerdown", e=>{
   }
 });
 
+/* POINTER MOVE */
 captureArea.addEventListener("pointermove", e=>{
   if(!pointers.has(e.pointerId)) return;
 
   pointers.set(e.pointerId, e);
 
+  /* DRAG */
   if(pointers.size === 1 && isDragging){
     posX = e.clientX - startX;
     posY = e.clientY - startY;
     render();
   }
 
+  /* PINCH ZOOM */
   if(pointers.size === 2){
     isDragging = false;
 
@@ -472,6 +507,7 @@ captureArea.addEventListener("pointermove", e=>{
   }
 });
 
+/* POINTER UP */
 captureArea.addEventListener("pointerup", e=>{
   pointers.delete(e.pointerId);
   captureArea.releasePointerCapture(e.pointerId);
@@ -479,12 +515,11 @@ captureArea.addEventListener("pointerup", e=>{
   if(pointers.size === 0) isDragging = false;
 });
 
-/* Wheel zoom */
+/* WHEEL ZOOM (Desktop) */
 captureArea.addEventListener("wheel", e=>{
   e.preventDefault();
   zoomAt(e.clientX, e.clientY, scale * (1 - Math.sign(e.deltaY) * 0.1));
 },{passive:false});
-
 /* ======================================================
    ADVANCED SECURE CAMERA ENGINE
 ====================================================== */
@@ -575,6 +610,7 @@ captureBtn.onclick = () => {
 
   if (stream) {
     stream.getTracks().forEach(track => track.stop());
+    stream = null;
   }
 
   cameraPreview.style.display = "none";
@@ -582,7 +618,26 @@ captureBtn.onclick = () => {
   switchCameraBtn.style.display = "none";
 
   userPhoto.style.display = "block";
+
+  // 🔥 Show Retake AFTER capture
+  retakeBtn.classList.remove("hidden");
 };
+retakeBtn.onclick = () => {
+
+  userPhoto.src = "";
+  userPhoto.style.display = "none";
+
+  scale = 1;
+  posX = 0;
+  posY = 0;
+  rotation = 0;
+
+  render();
+
+  retakeBtn.classList.add("hidden");
+  startCamera();
+};
+
 
 /* ===============================
    BACK TO EDITOR BUTTON FIX
@@ -611,12 +666,22 @@ const file=frameUpload.files[0];
 if(!file) return alert("Upload frame image");
 
 const reader=new FileReader();
-reader.onload=ev=>{
-frameOverlay.src=ev.target.result;
-caption=defaultCaption.value;
-tags=[...DEFAULT_TAGS,...defaultTags.value.split(" ").filter(Boolean)];
-setupSection.classList.add("hidden");
-photoEditorSection.classList.remove("hidden");
+reader.onload = ev => {
+  frameOverlay.onload = () => {
+
+    const ratio = frameOverlay.naturalWidth / frameOverlay.naturalHeight;
+
+    captureArea.style.aspectRatio = `${frameOverlay.naturalWidth} / ${frameOverlay.naturalHeight}`;
+
+  };
+
+  frameOverlay.src = ev.target.result;
+
+  caption = defaultCaption.value;
+  tags = [...DEFAULT_TAGS, ...defaultTags.value.split(" ").filter(Boolean)];
+
+  setupSection.classList.add("hidden");
+  photoEditorSection.classList.remove("hidden");
 };
 reader.readAsDataURL(file);
 });
@@ -626,34 +691,35 @@ photoEditorSection.classList.add("hidden");
 previewSection.classList.add("hidden");
 setupSection.classList.remove("hidden");
 };
+photoUpload.onchange = e => {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    userPhoto.onload = fitImage;
+    userPhoto.src = ev.target.result;
+    userPhoto.style.display = "block";
 
-photoUpload.onchange=e=>{
-const reader=new FileReader();
-reader.onload=ev=>{
-userPhoto.onload=fitImage;
-userPhoto.src=ev.target.result;
+    retakeBtn.classList.add("hidden"); // Hide retake if uploaded manually
+  };
+  reader.readAsDataURL(e.target.files[0]);
 };
-reader.readAsDataURL(e.target.files[0]);
-};
+
 /* ===============================
    STEP 2 → STEP 3
 ================================= */
+let finalCanvas = null;
 goToPreviewBtn.onclick = async () => {
 
-  if (!userPhoto.src || !userPhoto.naturalWidth) {
+  if (!userPhoto.complete || !userPhoto.naturalWidth){
     alert("Please upload or capture a photo first.");
     return;
   }
 
   try {
 
-    // Generate final image (frame + photo only)
-    finalCanvas = await generateCanvas();
+    finalCanvas = await generateCanvas(); // ✅ REMOVE "let"
 
-    // Show preview (NO caption drawn inside image)
     previewImage.src = finalCanvas.toDataURL("image/png");
 
-    // Show caption text below preview
     previewCaption.textContent = caption;
     previewHash.textContent = tags.join(" ");
 
