@@ -11,10 +11,16 @@
 
 <style>
 :root{ --orange:#fc7800; --orange-light:#ff9d3f; }
-html, body{
-  height:100%;
+*{
   margin:0;
-  overflow:hidden; /* 🚀 No scrolling */
+  padding:0;
+  box-sizing:border-box;
+}
+
+html, body{
+  width:100%;
+  min-height:100vh;
+  margin:0;
 }
 
 body{
@@ -24,21 +30,17 @@ body{
   justify-content:center;
   align-items:center;
 }
-
 .section{
-  width:100vw;
-  height:100vh;
-
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
   background:#fff;
   padding:20px;
-  box-sizing:border-box;
-
   display:flex;
   flex-direction:column;
-
   overflow:hidden;
 }
-
 h2{font-family:'Lora',serif;color:var(--orange)}
 
 input,textarea,select,button{
@@ -66,15 +68,20 @@ cursor:pointer;
 .frame-container{
   position:relative;
   width:100%;
-  max-width:600px;   /* control max size */
+  aspect-ratio: var(--frame-ratio, 1);
   margin:auto;
-  aspect-ratio: 1 / 1;  /* temporary default */
   overflow:hidden;
   border-radius:16px;
   background:#f3f3f3;
-  touch-action: none; /* prevent default touch actions */
-}
+  touch-action:none;
 
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  flex-shrink:0;      /* 🔥 CRITICAL */
+  min-height:200px;   /* 🔥 prevents collapse */
+}
 /* ===== SHUTTER BUTTON ===== */
 
 .shutter-btn{
@@ -112,15 +119,12 @@ cursor:pointer;
   position:absolute;
   top:50%;
   left:50%;
-  width:auto;
-  height:auto;
+  transform:translate(-50%, -50%);
   max-width:none;
   max-height:none;
-  transform:translate(-50%, -50%);
-  transform-origin:center center;
   user-select:none;
   z-index:1;
-  touch-action:none;
+  cursor:grab;
 }
 /* Camera preview */
 #cameraPreview{
@@ -141,6 +145,7 @@ z-index:2;
   width:100%;
   height:100%;
   object-fit:contain;
+  object-position:center;
   pointer-events:none;
   z-index:3;
 }
@@ -149,107 +154,316 @@ z-index:2;
   display:flex;
   height:100%;
 }
-
+.right-panel > * {
+  flex-shrink:0;
+}
 
 .caption{ margin-top:16px; font-size:14px; }
 .notice{ text-align:center; font-size:13px; color:var(--orange); margin-top:8px; height:18px; }
 
 /* ===== DESKTOP ===== */
+/* ===============================
+   DESKTOP CLEAN LAYOUT
+=============================== */
 @media (min-width:1024px){
+
   .editor-layout{
     display:flex;
+    height:100%;
     width:100%;
+  }
+
+  .left-panel{
     flex:1;
-    height:100%;
-    }
-
-  .left-panel{
-    width:50%;
-    padding-right:25px;
-    border-right:4px solid #e6e6e6;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:40px;
+    border-right:1px solid #e6e6e6;
   }
 
   .right-panel{
-    width:50%;
-    padding-left:25px;
-  }
-}
-
-/* ===== MOBILE PORTRAIT ===== */
-@media (max-width:1023px) and (orientation:portrait){
-
-  .editor-layout{
+    width:420px;   /* fixed clean control width */
+    display:flex;
     flex-direction:column;
-    height:100%;
-  }
-
-  .left-panel{
-    flex:0 0 60%;   /* 🔥 Give frame real space */
-    width:100%;
-  }
-
-  .right-panel{
-    flex:1;         /* Remaining space for controls */
-    width:100%;
-    overflow:hidden;
+    justify-content:center;
+    padding:40px;
   }
 
   .frame-container{
     width:100%;
-    height:100%;    /* Now works because parent has height */
+    max-width:650px;  /* prevent giant stretching */
+    max-height:90%;
+    border-radius:16px;
+  }
+
+  #previewImage{
+    width:100%;
+    height:auto;
+    object-fit:contain;
   }
 }
-
-/* ===== MOBILE LANDSCAPE ===== */
-@media (max-width:1023px) and (orientation:landscape){
-
+/* ===== MOBILE PORTRAIT ===== */
+@media (max-width:1023px) and (orientation:portrait){
   .editor-layout{
-    display:flex;
+  flex-direction:column;
+  height:100%;
+}
+
+.left-panel{
+  flex:0 0 auto;      /* 🔥 prevents collapse */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 0;
+}
+
+.frame-container{
+  width:100%;
+  max-width:95%;
+  max-height:60vh;    /* 🔥 gives real height */
+}
+
+  #previewSection{
+    padding:15px;
+  }
+
+  #previewSection .editor-layout{
+    flex-direction:column;
     height:100%;
   }
 
-  .left-panel{
-    width:50%;
-    padding-right:15px;
-    border-right:3px solid #e6e6e6;
-  }
-
-  .right-panel{
-    width:50%;
-    padding-left:15px;
-  }
-
-  /* Make frame feel full screen */
- .frame-container{
-  width:100%;
-  height:100%;
-
-  .small-back-btn{
-    width:45px !important;
-    height:45px;
+  #previewSection .left-panel,
+  #previewSection .right-panel{
+    width:100%;
+    border:none;
     padding:0;
-    font-size:18px;
-    border-radius:12px;
+  }
+
+  #previewSection .left-panel{
     display:flex;
+    flex-direction:column;
     align-items:center;
     justify-content:center;
-    margin-bottom:10px;
   }
 
-  /* Make it float like rotate */
-  #previewSection .small-back-btn{
-    position:absolute;
-    top:15px;
-    left:15px;
-    z-index:10;
+  #previewSection .frame-container{
+    width:100%;
+    max-width:95%;
+    max-height:55vh;
+    border-radius:16px;
   }
 
-  /* Remove large spacing */
-  #previewSection{
-    position:relative;
+  #previewImage{
+    width:100%;
+    height:auto;
+    object-fit:contain;
   }
 
+  #previewSection .caption{
+    margin-top:18px;
+    text-align:center;
+  }
+
+  #previewSection .right-panel{
+    margin-top:25px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
 }
+/* ===== MOBILE LANDSCAPE===== */
+@media (max-width:1023px) and (orientation:landscape){
+
+  html, body{
+    width:100vw;
+    height:100dvh;
+    overflow:hidden;
+  }
+
+  .section{
+    width:100vw;
+    height:100dvh;
+    padding:0;
+  }
+
+  .editor-layout{
+    width:100%;
+    height:100%;
+    display:flex;
+  }
+
+.left-panel{
+  width:65%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-right:2px solid #e6e6e6;
+  padding:10px;
+}
+
+.frame-container{
+  width:100%;
+  max-width:100%;
+  max-height:90%;
+  height:auto;        /* 🔥 important */
+}
+  .right-panel{
+    width:35%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    padding:10px;
+  }
+  /* Make everything compact */
+  input, textarea, select{
+    padding:5px;
+    font-size:12px;
+    margin-top:4px;
+  }
+  button{
+    padding:8px;
+    font-size:13px;
+  }
+     .back-btn{
+    padding:6px;
+    font-size:12px;
+    margin-bottom:4px;
+  }
+
+  .action-row{
+    display:flex;
+    gap:5px;
+  }
+
+  .action-row button{
+    flex:1;
+  }
+
+  #switchCameraBtn,
+  #rotateBtn{
+    width:36px;
+    padding:5px;
+  }
+
+  .shutter-btn{
+    width:50px;
+    height:50px;
+    border:4px solid white;
+  }
+
+  .shutter-btn::after{
+    width:34px;
+    height:34px;
+  }
+  .frame-container{
+  border-radius:0;
+}
+  .action-row{
+    display:flex;
+    gap:6px;
+  }
+  .action-row button{
+    flex:1;
+  }
+}  
+/* ===============================
+   FINAL STABLE PREVIEW LAYOUT
+=============================== */
+
+/* ---------- DESKTOP & LANDSCAPE (STRICT SPLIT) ---------- */
+
+#previewSection{
+  padding:0;
+}
+
+#previewSection .editor-layout{
+  display:flex;
+  width:100%;
+  height:100%;
+}
+
+/* LEFT PANEL (Frame Area) */
+#previewSection .left-panel{
+  width:65%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  border-right:2px solid #e6e6e6;
+  padding:20px;
+}
+
+/* RIGHT PANEL (Controls) */
+#previewSection .right-panel{
+  width:35%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:18px;
+  padding:25px;
+}
+
+/* Frame sizing */
+#previewSection .frame-container{
+  width:100%;
+  max-width:550px;
+  max-height:80%;
+  border-radius:16px;
+}
+
+#previewImage{
+  width:100%;
+  height:auto;
+  object-fit:contain;
+}
+
+#previewSection .caption{
+  margin-top:15px;
+  text-align:center;
+  font-size:15px;
+}
+
+/* Button sizing */
+#previewSection select,
+#previewSection button{
+  width:260px;
+  max-width:90%;
+}
+
+
+/* ---------- MOBILE PORTRAIT ONLY (STACKED) ---------- */
+
+@media (max-width:1023px) and (orientation:portrait){
+
+  #previewSection{
+    padding:15px;
+  }
+
+  #previewSection .editor-layout{
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:20px;
+  }
+
+  #previewSection .left-panel,
+  #previewSection .right-panel{
+    width:100%;
+    height:auto;
+    border:none;
+    padding:0;
+  }
+
+  #previewSection .frame-container{
+    max-height:55vh;
+  }
+
 }
 </style>
 </head>
@@ -263,79 +477,75 @@ z-index:2;
 <button type="submit">Continue</button>
 </form>
 </div>
-
 <div class="section hidden" id="photoEditorSection">
-<button class="back-btn" id="backBtn">⬅ Back to Setup</button>
 
+  <div class="editor-layout">
 
-<div class="editor-layout">
+    <!-- LEFT SIDE -->
+    <div class="left-panel">
+      <div class="frame-container" id="captureArea">
+        <img id="userPhoto" class="photo">
+        <video id="cameraPreview" autoplay playsinline
+          style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; z-index:1;">
+        </video>
+        <img id="frameOverlay" class="frame">
+      </div>
+    </div>
 
-<div class="left-panel">
-<div class="frame-container" id="captureArea">
-  <img id="userPhoto" class="photo">
-  <video id="cameraPreview" autoplay playsinline
-  style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; border-radius:16px; z-index:1;">
-  </video>
-  <img id="frameOverlay" class="frame">
+    <!-- RIGHT SIDE -->
+    <div class="right-panel">
+      <button class="back-btn" id="backBtn">⬅ Back</button>
+
+      <input type="file" id="photoUpload" accept="image/*">
+      <div id="shutterWrapper" style="display:none; text-align:center; margin-top:10px;">
+        <button id="captureBtn" class="shutter-btn"></button>
+      </div>
+<div class="action-row">
+  <button id="openCameraBtn">Open Camera</button>
+  <button id="switchCameraBtn" class="hidden">🔄</button>
+  <button id="rotateBtn">↻</button>
+  <button id="retakeBtn" class="hidden">🔁</button>
 </div>
-</div>
 
-<div class="right-panel">
-<input type="file" id="photoUpload" accept="image/*">
-<div style="display:flex; gap:8px; align-items:center;">
-  <button id="openCameraBtn" style="flex:1;">📷 Capture</button>
-  <button id="switchCameraBtn" style="width:45px; display:none;">🔄</button>
-  <button id="rotateBtn" style="width:45px;">↻</button>
-</div>
-<div id="shutterWrapper" style="display:none; text-align:center; margin-top:15px;">
-  <button id="captureBtn" class="shutter-btn"></button>
-</div>
-
-<button id="retakeBtn" class="hidden" style="margin-top:10px;">
-  🔁 Retake
-</button>
-
-<button id="goToPreviewBtn">Next ➜ Preview</button>
-
-</div>
-</div>
+<button id="goToPreviewBtn" style="margin-top:12px;">Next ➜</button>
+    </div>
+  </div>
 </div>
 <div class="section hidden" id="previewSection">
-<button class="back-btn small-back-btn" id="backToEditorBtn">⬅</button>
 
-<div class="editor-layout">
+  <button class="back-btn small-back-btn" id="backToEditorBtn">⬅</button>
 
-<div class="left-panel">
+  <div class="editor-layout">
 
-<div class="frame-container" id="previewArea">
-  <img id="previewImage"
-     style="max-width:100%; max-height:100%; object-fit:contain;">
+    <div class="left-panel">
+
+      <div class="frame-container" id="previewArea">
+      <img id="previewImage">
+      </div>
+
+      <div class="caption">
+        <div id="previewCaption"></div>
+        <div id="previewHash"></div>
+      </div>
+
+    </div>
+
+    <div class="right-panel">
+
+      <select id="downloadFormat">
+        <option value="png">PNG</option>
+        <option value="jpg">JPG</option>
+        <option value="jpeg">JPEG</option>
+        <option value="pdf">PDF</option>
+      </select>
+
+      <button id="downloadBtn">Download</button>
+      <button id="shareBtn">Share</button>
+
+    </div>
+
+  </div>
 </div>
-
-<div class="caption">
-<div id="previewCaption"></div>
-<div id="previewHash"></div>
-</div>
-
-</div>
-
-<div class="right-panel">
-
-<select id="downloadFormat">
-<option value="png">PNG</option>
-<option value="jpg">JPG</option>
-<option value="jpeg">JPEG</option>
-<option value="pdf">PDF</option>
-</select>
-
-<button id="downloadBtn">Download</button>
-<button id="shareBtn">Share</button>
-<div class="notice" id="notice"></div>
-
-</div>
-</div>
-</div>
-
 <script>
 const DEFAULT_TAGS=["#HE5Solutions","#EventBranding","#Innovation"];
 
@@ -366,64 +576,53 @@ const downloadFormat=document.getElementById("downloadFormat");
 const previewArea=document.getElementById("previewArea");
 const retakeBtn = document.getElementById("retakeBtn");
 
-
+let frameRatio = 1;
 let caption="", tags=[];
+
+function enterFullscreen() {
+  const el = document.documentElement;
+
+  if (el.requestFullscreen) {
+    el.requestFullscreen();
+  } else if (el.webkitRequestFullscreen) {
+    el.webkitRequestFullscreen();
+  } else if (el.msRequestFullscreen) {
+    el.msRequestFullscreen();
+  }
+}
+function showStep(sectionToShow) {
+
+  // Hide all sections
+  setupSection.classList.add("hidden");
+  photoEditorSection.classList.add("hidden");
+  previewSection.classList.add("hidden");
+
+  // Show requested section
+  sectionToShow.classList.remove("hidden");
+}
 
 /* ======================================================
    TRUE FREE STYLE IMAGE ENGINE (CANVAS-LIKE)
 ====================================================== */
-
-let scale = 1;
-let minScale = 1;
-let maxScale = 5;
-let posX = 0;
-let posY = 0;
-let startX = 0;
-let startY = 0;
-let pointers = new Map();
-let initialDistance = 0;
-let initialScale = 1;
-let rotation = 0;
-/* Render */
-function render(){
-  userPhoto.style.transform =
-    `translate(-50%, -50%) 
-     translate(${posX}px, ${posY}px) 
-     scale(${scale}) 
-     rotate(${rotation}deg)`;
-}
-
 rotateBtn.onclick = () => {
   rotation = (rotation + 90) % 360;
   render();
 };
-
-
-/* Fit image */
-function fitImage(){
-  const rect = captureArea.getBoundingClientRect();
-  const imgW = userPhoto.naturalWidth;
-  const imgH = userPhoto.naturalHeight;
-
-  const scaleX = rect.width / imgW;
-  const scaleY = rect.height / imgH;
-
-  scale = Math.max(scaleX, scaleY);
-  minScale = scale;
-  maxScale = scale * 5;
-
-  posX = 0;
-  posY = 0;
-  rotation = 0;
-
-  render();
-}
 
 /* ======================================================
    PROFESSIONAL FREE MOVE + SMART ZOOM ENGINE
 ====================================================== */
 
 let baseScale = 1;
+let scale = 1;
+let posX = 0;
+let posY = 0;
+let rotation = 0;
+
+let startX = 0;
+let startY = 0;
+
+const pointers = new Map();
 let isDragging = false;
 let pinchStartDistance = 0;
 let pinchStartScale = 1;
@@ -557,20 +756,19 @@ let currentFacing = "user";
 async function startCamera() {
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert("Camera not supported on this device.");
+    alert("Camera not supported in this browser.");
     return;
   }
 
-  const isLocal =
-  location.hostname === "localhost" ||
-  location.hostname === "127.0.0.1" ||
-  location.hostname.startsWith("192.168.");
+  const isSecure =
+    location.protocol === "https:" ||
+    location.hostname === "localhost" ||
+    location.hostname === "127.0.0.1";
 
-if (location.protocol !== "https:" && !isLocal) {
-  alert("Camera requires HTTPS or local environment.");
-  return;
-}
-
+  if (!isSecure) {
+    alert("Camera requires HTTPS or Localhost.");
+    return;
+  }
 
   try {
 
@@ -579,46 +777,70 @@ if (location.protocol !== "https:" && !isLocal) {
       stream = null;
     }
 
-    const constraints = {
-      video: {
-        facingMode: currentFacing,
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
-      },
-      audio: false
-    };
+    // Detect mobile device
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    let constraints;
+
+    if (isMobile) {
+      // Mobile → allow switching front/back
+      constraints = {
+        video: {
+          facingMode: currentFacing
+        },
+        audio: false
+      };
+    } else {
+      // Desktop → use default webcam
+      constraints = {
+        video: true,
+        audio: false
+      };
+    }
 
     stream = await navigator.mediaDevices.getUserMedia(constraints);
 
     cameraPreview.srcObject = stream;
+
+    // IMPORTANT FIX 🔥
+    await cameraPreview.play();
+
     cameraPreview.style.display = "block";
     document.getElementById("shutterWrapper").style.display = "block";
-    switchCameraBtn.style.display = "inline-block";
+
+    if (isMobile) {
+      switchCameraBtn.classList.remove("hidden");
+    } else {
+      switchCameraBtn.classList.add("hidden");
+    }
 
     userPhoto.style.display = "none";
 
   } catch (err) {
 
-    if (err.name === "NotAllowedError") {
-      alert("Camera permission denied. Please enable camera access.");
-    } else {
-      alert("Camera not available.");
-    }
-
     console.error(err);
+
+    if (err.name === "NotAllowedError") {
+      alert("Camera permission denied.");
+    } else if (err.name === "NotFoundError") {
+      alert("No camera device found.");
+    } else if (err.name === "OverconstrainedError") {
+      alert("Camera constraints not supported.");
+    } else {
+      alert("Unable to start camera.");
+    }
   }
 }
-
 /* Open camera */
-openCameraBtn.onclick = () => {
+openCameraBtn.onclick = async () => {
+  enterFullscreen();
   currentFacing = "user";
-  startCamera();
+  await startCamera();
 };
-
 /* Switch camera */
-switchCameraBtn.onclick = () => {
+switchCameraBtn.onclick = async () => {
   currentFacing = currentFacing === "user" ? "environment" : "user";
-  startCamera();
+  await startCamera();
 };
 
 /* Capture image */
@@ -681,42 +903,68 @@ backToEditorBtn.addEventListener("click", () => {
   notice.textContent = "";
 
 });
+function fixViewportHeight() {
+  document.documentElement.style.setProperty(
+    '--vh',
+    `${window.innerHeight * 0.01}px`
+  );
+}
+
+window.addEventListener('resize', fixViewportHeight);
+fixViewportHeight();
 
 /* ======================================================
    FORM
 ====================================================== */
+document.getElementById("setupForm").addEventListener("submit", e => {
+  e.preventDefault();
 
-document.getElementById("setupForm").addEventListener("submit",e=>{
-e.preventDefault();
-const file=frameUpload.files[0];
-if(!file) return alert("Upload frame image");
+  const file = frameUpload.files[0];
+  if (!file) {
+    alert("Upload frame image");
+    return;
+  }
 
-const reader=new FileReader();
-reader.onload = ev => {
-  frameOverlay.onload = () => {
+  const reader = new FileReader();
 
-    const ratio = frameOverlay.naturalWidth / frameOverlay.naturalHeight;
+  reader.onload = ev => {
 
-    captureArea.style.aspectRatio = `${frameOverlay.naturalWidth} / ${frameOverlay.naturalHeight}`;
+frameOverlay.onload = () => {
 
-  };
+  const naturalWidth = frameOverlay.naturalWidth;
+  const naturalHeight = frameOverlay.naturalHeight;
 
-  frameOverlay.src = ev.target.result;
+  if (!naturalWidth || !naturalHeight) {
+    alert("Invalid frame image.");
+    return;
+  }
+
+  frameRatio = naturalWidth / naturalHeight;
+
+  // Apply globally via CSS variable
+  document.documentElement.style.setProperty(
+    "--frame-ratio",
+    frameRatio
+  );
 
   caption = defaultCaption.value;
-  tags = [...DEFAULT_TAGS, ...defaultTags.value.split(" ").filter(Boolean)];
+  tags = [
+    ...DEFAULT_TAGS,
+    ...defaultTags.value.split(" ").filter(Boolean)
+  ];
 
-  setupSection.classList.add("hidden");
-  photoEditorSection.classList.remove("hidden");
+  showStep(photoEditorSection);
+  enterFullscreen();
 };
-reader.readAsDataURL(file);
+
+    // ✅ Set image source AFTER defining onload
+    frameOverlay.src = ev.target.result;
+  };
+
+  reader.readAsDataURL(file);
 });
-
-backBtn.onclick=()=>{
-photoEditorSection.classList.add("hidden");
-previewSection.classList.add("hidden");
-setupSection.classList.remove("hidden");
-};
+backBtn.onclick = () => showStep(setupSection);
+backToEditorBtn.onclick = () => showStep(photoEditorSection);
 photoUpload.onchange = e => {
   const reader = new FileReader();
   reader.onload = ev => {
@@ -749,8 +997,7 @@ goToPreviewBtn.onclick = async () => {
     previewCaption.textContent = caption;
     previewHash.textContent = tags.join(" ");
 
-    photoEditorSection.classList.add("hidden");
-    previewSection.classList.remove("hidden");
+showStep(previewSection);
 
   } catch (err) {
     console.error(err);
@@ -773,7 +1020,7 @@ async function generateCanvas() {
 
   const canvas = await html2canvas(captureArea, {
     useCORS: true,
-    scale: 2,                 // fixed scale
+    scale: window.devicePixelRatio, // fixed scale
     backgroundColor: "#ffffff", // IMPORTANT FIX
     removeContainer: true,
     logging: false
@@ -798,27 +1045,40 @@ downloadBtn.onclick = async () => {
 
     if (format === "pdf") {
 
-      const { jsPDF } = window.jspdf;
+  const { jsPDF } = window.jspdf;
 
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: [finalCanvas.width, finalCanvas.height]
-      });
+  const imgData = finalCanvas.toDataURL("image/png");
 
-      pdf.addImage(
-        finalCanvas.toDataURL("image/png"),
-        "PNG",
-        0,
-        0,
-        finalCanvas.width,
-        finalCanvas.height
-      );
+  // Determine orientation automatically
+  const orientation =
+    finalCanvas.width > finalCanvas.height ? "landscape" : "portrait";
 
-      pdf.save("event-frame.pdf");
-      return;
-    }
+  const pdf = new jsPDF({
+    orientation: orientation,
+    unit: "mm",
+    format: "a4"
+  });
 
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  // Convert canvas pixels to proportional PDF size
+  const ratio = Math.min(
+    pageWidth / finalCanvas.width,
+    pageHeight / finalCanvas.height
+  );
+
+  const imgWidth = finalCanvas.width * ratio;
+  const imgHeight = finalCanvas.height * ratio;
+
+  const x = (pageWidth - imgWidth) / 2;
+  const y = (pageHeight - imgHeight) / 2;
+
+  pdf.addImage(imgData, "PNG", x, y, imgWidth, imgHeight);
+
+  pdf.save("event-frame.pdf");
+  return;
+}
     let mime = "image/png";
     if (format === "jpg" || format === "jpeg") {
       mime = "image/jpeg";
@@ -972,7 +1232,6 @@ async function copyCaption(text) {
   if (navigator.clipboard && window.isSecureContext) {
     try {
       await navigator.clipboard.writeText(text);
-      notice.textContent = "Caption copied to clipboard!";
     } catch {}
   }
 }
